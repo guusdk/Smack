@@ -151,7 +151,7 @@ public class MoodIntegrationTest extends AbstractSmackIntegrationTest {
             moodManager.addMoodListener(listener);
             notificationFilterReceived.waitForResult(timeout);
         } finally {
-            // This API does not seem to exist?
+            // This API does not seem to exist? See https://github.com/igniterealtime/Smack/pull/441
             //discoManager.removeEntityCapabilitiesChangedListener(notificationFilterReceivedListener);
         }
     }

@@ -203,7 +203,7 @@ public class GeolocationIntegrationTest extends AbstractSmackIntegrationTest {
             geoManager.addGeoLocationListener(listener);
             notificationFilterReceived.waitForResult(timeout);
         } finally {
-            // This API does not seem to exist?
+            // This API does not seem to exist? See https://github.com/igniterealtime/Smack/pull/441
             //discoManager.removeEntityCapabilitiesChangedListener(notificationFilterReceivedListener);
         }
     }
