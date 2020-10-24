@@ -16,6 +16,11 @@
  */
 package org.jivesoftware.smackx.muc;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -44,8 +49,6 @@ import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.jid.parts.Localpart;
 import org.jxmpp.jid.parts.Resourcepart;
 import org.jxmpp.stringprep.XmppStringprepException;
-
-import static org.junit.jupiter.api.Assertions.*;
 
 public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
 
