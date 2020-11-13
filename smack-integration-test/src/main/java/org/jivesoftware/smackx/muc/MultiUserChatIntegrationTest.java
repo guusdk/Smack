@@ -77,8 +77,52 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         }
     }
 
+    /**
+     * Asserts that when a user joins a room, they are themselves included on the list of users notified (self-presence)
+     *
+     * <p>From XEP-0045 § 7.2.2:</p>
+     * <blockquote>
+     * ...the service MUST also send presence from the new participant's occupant JID to the full JIDs of all the occupants (including the new occupant)
+     * </blockquote>
+     *
+     * @throws Exception
+     */
     @SmackIntegrationTest
-    public void mucJoinLeaveTest() throws XmppStringprepException, NotAMucServiceException, NoResponseException,
+    public void mucJoinTest() throws XmppStringprepException, NotAMucServiceException, NoResponseException,
+            XMPPErrorException, NotConnectedException, InterruptedException, MucNotJoinedException {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-join-leave-" + randomString),
+                mucService.getDomain());
+
+        MultiUserChat muc = mucManagerOne.getMultiUserChat(mucAddress);
+
+        Presence reflectedJoinPresence = muc.join(Resourcepart.from("nick-one"));
+
+        MUCUser mucUser = MUCUser.from(reflectedJoinPresence);
+
+        assertNotNull(mucUser);
+        assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
+        assertTrue(reflectedJoinPresence.getFrom().toString().equals(mucAddress + "/nick-one"));
+        assertEquals(reflectedJoinPresence.getTo().toString(), conOne.getUser().asEntityFullJidIfPossible().toString());
+    }
+
+    /**
+     * Asserts that when a user leaves a room, they are themselves included on the list of users notified (self-presence)
+     *
+     * <p>From XEP-0045 § 7.14:</p>
+     * <blockquote>
+     * The service MUST then send a presence stanzas of type "unavailable" from the departing user's occupant JID to the departing occupant's full JIDs, including a status code of "110" to indicate that this notification is "self-presence"
+     * </blockquote>
+     *
+     * @throws XmppStringprepException
+     * @throws NotAMucServiceException
+     * @throws NoResponseException
+     * @throws XMPPErrorException
+     * @throws NotConnectedException
+     * @throws InterruptedException
+     * @throws MucNotJoinedException
+     */
+    @SmackIntegrationTest
+    public void mucLeaveTest() throws XmppStringprepException, NotAMucServiceException, NoResponseException,
             XMPPErrorException, NotConnectedException, InterruptedException, MucNotJoinedException {
         EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-join-leave-" + randomString),
                 mucService.getDomain());
@@ -93,6 +137,8 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         assertNotNull(mucUser);
 
         assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
+        assertTrue(reflectedLeavePresence.getFrom().toString().equals(mucAddress + "/nick-one"));
+        assertEquals(reflectedLeavePresence.getTo().toString(), conOne.getUser().asEntityFullJidIfPossible().toString());
     }
 
     @SmackIntegrationTest

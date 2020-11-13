@@ -621,6 +621,7 @@ public class MultiUserChat {
      * joining the room, the room will decide the amount of history to send.
      *
      * @param nickname the nickname to use.
+     * @return the leave presence as reflected by the MUC.
      * @throws NoResponseException if there was no response from the remote entity.
      * @throws XMPPErrorException if an error occurs joining the room. In particular, a
      *      401 error can occur if no password was provided and one is required; or a
@@ -633,10 +634,11 @@ public class MultiUserChat {
      * @throws InterruptedException if the calling thread was interrupted.
      * @throws NotAMucServiceException if the entity is not a MUC serivce.
      */
-    public void join(Resourcepart nickname) throws NoResponseException, XMPPErrorException,
+    public Presence join(Resourcepart nickname) throws NoResponseException, XMPPErrorException,
                     NotConnectedException, InterruptedException, NotAMucServiceException {
         MucEnterConfiguration.Builder builder = getEnterConfigurationBuilder(nickname);
-        join(builder.build());
+        Presence reflectedJoinPresence = join(builder.build());
+        return reflectedJoinPresence;
     }
 
     /**
@@ -683,6 +685,7 @@ public class MultiUserChat {
      * decide to create a new room or not.
      *
      * @param mucEnterConfiguration the configuration used to enter the MUC.
+     * @return the join presence as reflected by the MUC.
      * @throws XMPPErrorException if an error occurs joining the room. In particular, a
      *      401 error can occur if no password was provided and one is required; or a
      *      403 error can occur if the user is banned; or a
@@ -694,7 +697,7 @@ public class MultiUserChat {
      * @throws InterruptedException if the calling thread was interrupted.
      * @throws NotAMucServiceException if the entity is not a MUC serivce.
      */
-    public synchronized void join(MucEnterConfiguration mucEnterConfiguration)
+    public synchronized Presence join(MucEnterConfiguration mucEnterConfiguration)
         throws XMPPErrorException, NoResponseException, NotConnectedException, InterruptedException, NotAMucServiceException {
         // If we've already joined the room, leave it before joining under a new
         // nickname.
@@ -706,7 +709,8 @@ public class MultiUserChat {
                 LOGGER.log(Level.WARNING, "Could not leave MUC prior joining, assuming we are not joined", e);
             }
         }
-        enter(mucEnterConfiguration);
+        Presence reflectedJoinPresence = enter(mucEnterConfiguration);
+        return reflectedJoinPresence;
     }
 
     /**
