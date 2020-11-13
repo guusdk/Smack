@@ -45,6 +45,7 @@ import org.igniterealtime.smack.inttest.util.ResultSyncPoint;
 import org.igniterealtime.smack.inttest.util.SimpleResultSyncPoint;
 import org.jxmpp.jid.DomainBareJid;
 import org.jxmpp.jid.EntityBareJid;
+import org.jxmpp.jid.EntityFullJid;
 import org.jxmpp.jid.impl.JidCreate;
 import org.jxmpp.jid.parts.Localpart;
 import org.jxmpp.jid.parts.Resourcepart;
@@ -56,6 +57,7 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
 
     private final MultiUserChatManager mucManagerOne;
     private final MultiUserChatManager mucManagerTwo;
+    private final MultiUserChatManager mucManagerThree;
     private final DomainBareJid mucService;
 
     public MultiUserChatIntegrationTest(SmackIntegrationTestEnvironment environment)
@@ -64,6 +66,7 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         super(environment);
         mucManagerOne = MultiUserChatManager.getInstanceFor(conOne);
         mucManagerTwo = MultiUserChatManager.getInstanceFor(conTwo);
+        mucManagerThree = MultiUserChatManager.getInstanceFor(conThree);
 
         List<DomainBareJid> services = mucManagerOne.getMucServiceDomains();
         if (services.isEmpty()) {
@@ -119,10 +122,319 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         mucAsSeenByTwo.join(Resourcepart.from("two-" + randomString));
 
         mucAsSeenByOne.sendMessage(mucMessage);
-        resultSyncPoint.waitForResult(timeout);
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+        }
+    }
 
-        mucAsSeenByOne.leave();
-        mucAsSeenByTwo.leave();
+    /**
+     * Asserts that a user who undergoes an role change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.1.3:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the occupant's role to reflect the change and communicate the change to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 9.6:</p>
+     * <blockquote>
+     * The service MUST then send updated presence from this individual to all occupants, indicating the addition of moderator status...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucRoleTestForReceivingModerator() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+
+        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void moderatorGranted(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+
+        //This implicitly tests "The service MUST add the user to the moderator list and then inform the admin of success" in §9.6, since it'll throw on either an error IQ or on no response.
+        mucAsSeenByOne.grantModerator(nicknameTwo);
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+        }
+    }
+
+    /**
+     * Asserts that a user who is present when another user undergoes an role change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.1.3:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the occupant's role to reflect the change and communicate the change to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 9.6:</p>
+     * <blockquote>
+     * The service MUST then send updated presence from this individual to all occupants, indicating the addition of moderator status...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucRoleTestForWitnessingModerator() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByThree = mucManagerThree.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+        mucAsSeenByThree.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void moderatorGranted(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+        mucAsSeenByThree.join(nicknameThree);
+
+        mucAsSeenByOne.grantModerator(nicknameTwo);
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+            mucAsSeenByThree.leave();
+        }
+
+    }
+
+    /**
+     * Asserts that a user who undergoes an role change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.1.3:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the occupant's role to reflect the change and communicate the change to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 9.7:</p>
+     * <blockquote>
+     * The service MUST then send updated presence from this individual to all occupants, indicating the removal of moderator status...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucRoleTestForRemovingModerator() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void moderatorRevoked(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+
+        mucAsSeenByOne.grantModerator(nicknameTwo);
+        mucAsSeenByOne.revokeModerator(nicknameTwo);
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+        }
+    }
+
+    /**
+     * Asserts that a user who is present when another user undergoes an role change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.1.3:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the occupant's role to reflect the change and communicate the change to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 9.6:</p>
+     * <blockquote>
+     * The service MUST then send updated presence from this individual to all occupants, indicating the removal of moderator status...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucRoleTestForWitnessingModeratorRemoval() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByThree = mucManagerThree.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+        mucAsSeenByThree.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void moderatorRevoked(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+        mucAsSeenByThree.join(nicknameThree);
+
+        mucAsSeenByOne.grantModerator(nicknameTwo);
+        mucAsSeenByOne.revokeModerator(nicknameTwo);
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+            mucAsSeenByThree.leave();
+        }
+
+    }
+
+    /**
+     * Asserts that a user in an unmoderated room who undergoes an afilliation change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.1.3:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the occupant's role to reflect the change and communicate the change to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 8.4:</p>
+     * <blockquote>
+     * The service MUST then send updated presence from this individual to all occupants, indicating the removal of voice privileges...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucRoleTestForRevokingVoice() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void voiceRevoked(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+        mucAsSeenByOne.revokeVoice(nicknameTwo);
+
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+        }
+    }
+
+    /**
+     * Asserts that a user who is present when another user undergoes an role change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.1.3:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the occupant's role to reflect the change and communicate the change to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 8.4:</p>
+     * <blockquote>
+     * The service MUST then send updated presence from this individual to all occupants, indicating the removal of voice privileges...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucRoleTestForWitnessingRevokingVoice() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByThree = mucManagerThree.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+        mucAsSeenByThree.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void voiceRevoked(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+        mucAsSeenByThree.join(nicknameThree);
+
+        mucAsSeenByOne.revokeVoice(nicknameTwo);
+
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+            mucAsSeenByThree.leave();
+        }
     }
 
     @SmackIntegrationTest
