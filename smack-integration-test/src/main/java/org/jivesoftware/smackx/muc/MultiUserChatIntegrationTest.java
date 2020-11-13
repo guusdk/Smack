@@ -437,6 +437,213 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         }
     }
 
+    
+    /**
+     * Asserts that a user who undergoes an affiliation change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.2.2:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the user's affiliation to reflect the change and communicate that to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 10.6:</p>
+     * <blockquote>
+     * If the user is in the room, the service MUST then send updated presence from this individual to all occupants, indicating the granting of admin status...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucAffiliationTestForReceivingAdmin() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+
+        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void adminGranted(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+
+        //This implicitly tests "The service MUST add the user to the admin list and then inform the owner of success" in §10.6, since it'll throw on either an error IQ or on no response.
+        mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+        }
+    }
+
+    /**
+     * Asserts that a user who is present when another user undergoes an affiliation change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.2.2:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the user's affiliation to reflect the change and communicate that to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 10.6:</p>
+     * <blockquote>
+     * If the user is in the room, the service MUST then send updated presence from this individual to all occupants, indicating the granting of admin status...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucAffiliationTestForWitnessingAdmin() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByThree = mucManagerThree.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+        mucAsSeenByThree.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void adminGranted(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+        mucAsSeenByThree.join(nicknameThree);
+
+        mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+            mucAsSeenByThree.leave();
+        }
+
+    }
+
+    /**
+     * Asserts that a user who undergoes a role change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.2.2:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the user's affiliation to reflect the change and communicate that to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 10.7:</p>
+     * <blockquote>
+     * If the user is in the room, the service MUST then send updated presence from this individual to all occupants, indicating the loss of admin status by sending a presence element...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucAffiliationTestForRemovingAdmin() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void adminRevoked(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+
+        mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+        mucAsSeenByOne.revokeAdmin(conTwo.getUser().asEntityBareJid());
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+        }
+    }
+
+    /**
+     * Asserts that a user who is present when another user undergoes a role change receives that change as a presence update
+     *
+     * <p>From XEP-0045 § 5.2.2:</p>
+     * <blockquote>
+     * ...a MUC service implementation MUST change the user's affiliation to reflect the change and communicate that to all occupants...
+     * </blockquote>
+     *
+     * <p>From XEP-0045 § 10.7:</p>
+     * <blockquote>
+     * If the user is in the room, the service MUST then send updated presence from this individual to all occupants, indicating the loss of admin status by sending a presence element...
+     * </blockquote>
+     *
+     * @throws Exception
+     */
+    @SmackIntegrationTest
+    public void mucAffiliationTestForWitnessingAdminRemoval() throws Exception {
+        EntityBareJid mucAddress = JidCreate.entityBareFrom(Localpart.from("smack-inttest-" + randomString), mucService.getDomain());
+
+        MultiUserChat mucAsSeenByOne = mucManagerOne.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByTwo = mucManagerTwo.getMultiUserChat(mucAddress);
+        MultiUserChat mucAsSeenByThree = mucManagerThree.getMultiUserChat(mucAddress);
+
+        final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
+
+        mucAsSeenByThree.addParticipantStatusListener(new ParticipantStatusListener() {
+            @Override
+            public void adminRevoked(EntityFullJid participant) {
+                resultSyncPoint.signal("done");
+            }
+        });
+
+        MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
+        if (handle != null) {
+            handle.makeInstant();
+        }
+
+        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+        mucAsSeenByTwo.join(nicknameTwo);
+        mucAsSeenByThree.join(nicknameThree);
+
+        mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+        mucAsSeenByOne.revokeAdmin(conTwo.getUser().asEntityBareJid());
+        try{
+            resultSyncPoint.waitForResult(timeout);
+        } finally {
+            mucAsSeenByTwo.leave();
+            mucAsSeenByOne.leave();
+            mucAsSeenByThree.leave();
+        }
+
+    }
+
     @SmackIntegrationTest
     public void mucDestroyTest() throws TimeoutException, Exception {
 
