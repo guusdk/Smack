@@ -131,7 +131,7 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
     }
 
     /**
-     * Asserts that a user who undergoes an role change receives that change as a presence update
+     * Asserts that a user who undergoes a role change receives that change as a presence update
      *
      * <p>From XEP-0045 § 5.1.3:</p>
      * <blockquote>
@@ -181,7 +181,7 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
     }
 
     /**
-     * Asserts that a user who is present when another user undergoes an role change receives that change as a presence update
+     * Asserts that a user who is present when another user undergoes a role change receives that change as a presence update
      *
      * <p>From XEP-0045 § 5.1.3:</p>
      * <blockquote>
@@ -234,7 +234,7 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
     }
 
     /**
-     * Asserts that a user who undergoes an role change receives that change as a presence update
+     * Asserts that a user who undergoes a role change receives that change as a presence update
      *
      * <p>From XEP-0045 § 5.1.3:</p>
      * <blockquote>
@@ -283,7 +283,7 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
     }
 
     /**
-     * Asserts that a user who is present when another user undergoes an role change receives that change as a presence update
+     * Asserts that a user who is present when another user undergoes a role change receives that change as a presence update
      *
      * <p>From XEP-0045 § 5.1.3:</p>
      * <blockquote>
@@ -385,7 +385,7 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
     }
 
     /**
-     * Asserts that a user who is present when another user undergoes an role change receives that change as a presence update
+     * Asserts that a user who is present when another user undergoes a role change receives that change as a presence update
      *
      * <p>From XEP-0045 § 5.1.3:</p>
      * <blockquote>
