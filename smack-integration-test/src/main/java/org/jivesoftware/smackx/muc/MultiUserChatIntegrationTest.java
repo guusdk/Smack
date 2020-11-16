@@ -200,10 +200,9 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
 
         final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
 
-
-        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+        mucAsSeenByTwo.addUserStatusListener(new UserStatusListener() {
             @Override
-            public void moderatorGranted(EntityFullJid participant) {
+            public void moderatorGranted() {
                 resultSyncPoint.signal("done");
             }
         });
@@ -303,9 +302,9 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
 
         final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
 
-        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+        mucAsSeenByTwo.addUserStatusListener(new UserStatusListener() {
             @Override
-            public void moderatorRevoked(EntityFullJid participant) {
+            public void moderatorRevoked() {
                 resultSyncPoint.signal("done");
             }
         });
@@ -406,9 +405,9 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
 
         final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
 
-        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+        mucAsSeenByTwo.addUserStatusListener(new UserStatusListener() {
             @Override
-            public void voiceRevoked(EntityFullJid participant) {
+            public void voiceRevoked() {
                 resultSyncPoint.signal("done");
             }
         });
@@ -509,9 +508,9 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
 
 
-        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+        mucAsSeenByTwo.addUserStatusListener(new UserStatusListener() {
             @Override
-            public void adminGranted(EntityFullJid participant) {
+            public void adminGranted() {
                 resultSyncPoint.signal("done");
             }
         });
@@ -611,9 +610,9 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
 
         final ResultSyncPoint<String, Exception> resultSyncPoint = new ResultSyncPoint<>();
 
-        mucAsSeenByTwo.addParticipantStatusListener(new ParticipantStatusListener() {
+        mucAsSeenByTwo.addUserStatusListener(new UserStatusListener() {
             @Override
-            public void adminRevoked(EntityFullJid participant) {
+            public void adminRevoked() {
                 resultSyncPoint.signal("done");
             }
         });
