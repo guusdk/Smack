@@ -101,7 +101,7 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
 
         assertNotNull(mucUser);
         assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
-        assertTrue(reflectedJoinPresence.getFrom().toString().equals(mucAddress + "/nick-one"));
+        assertEquals(mucAddress + "/nick-one", reflectedJoinPresence.getFrom().toString());
         assertEquals(reflectedJoinPresence.getTo().toString(), conOne.getUser().asEntityFullJidIfPossible().toString());
     }
 
@@ -137,7 +137,7 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         assertNotNull(mucUser);
 
         assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
-        assertTrue(reflectedLeavePresence.getFrom().toString().equals(mucAddress + "/nick-one"));
+        assertEquals(mucAddress + "/nick-one", reflectedLeavePresence.getFrom().toString());
         assertEquals(reflectedLeavePresence.getTo().toString(), conOne.getUser().asEntityFullJidIfPossible().toString());
     }
 
