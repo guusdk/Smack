@@ -94,15 +94,18 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
                 mucService.getDomain());
 
         MultiUserChat muc = mucManagerOne.getMultiUserChat(mucAddress);
+        try {
+            Presence reflectedJoinPresence = muc.join(Resourcepart.from("nick-one"));
 
-        Presence reflectedJoinPresence = muc.join(Resourcepart.from("nick-one"));
+            MUCUser mucUser = MUCUser.from(reflectedJoinPresence);
 
-        MUCUser mucUser = MUCUser.from(reflectedJoinPresence);
-
-        assertNotNull(mucUser);
-        assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
-        assertEquals(mucAddress + "/nick-one", reflectedJoinPresence.getFrom().toString());
-        assertEquals(reflectedJoinPresence.getTo().toString(), conOne.getUser().asEntityFullJidIfPossible().toString());
+            assertNotNull(mucUser);
+            assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
+            assertEquals(mucAddress + "/nick-one", reflectedJoinPresence.getFrom().toString());
+            assertEquals(reflectedJoinPresence.getTo().toString(), conOne.getUser().asEntityFullJidIfPossible().toString());
+        } finally {
+            tryDestroy(muc);
+        }
     }
 
     /**
@@ -128,17 +131,20 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
                 mucService.getDomain());
 
         MultiUserChat muc = mucManagerOne.getMultiUserChat(mucAddress);
+        try {
+            muc.join(Resourcepart.from("nick-one"));
 
-        muc.join(Resourcepart.from("nick-one"));
+            Presence reflectedLeavePresence = muc.leave();
 
-        Presence reflectedLeavePresence = muc.leave();
+            MUCUser mucUser = MUCUser.from(reflectedLeavePresence);
+            assertNotNull(mucUser);
 
-        MUCUser mucUser = MUCUser.from(reflectedLeavePresence);
-        assertNotNull(mucUser);
-
-        assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
-        assertEquals(mucAddress + "/nick-one", reflectedLeavePresence.getFrom().toString());
-        assertEquals(reflectedLeavePresence.getTo().toString(), conOne.getUser().asEntityFullJidIfPossible().toString());
+            assertTrue(mucUser.getStatus().contains(MUCUser.Status.PRESENCE_TO_SELF_110));
+            assertEquals(mucAddress + "/nick-one", reflectedLeavePresence.getFrom().toString());
+            assertEquals(reflectedLeavePresence.getTo().toString(), conOne.getUser().asEntityFullJidIfPossible().toString());
+        } finally {
+            tryDestroy(muc);
+        }
     }
 
     @SmackIntegrationTest
@@ -162,17 +168,15 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
-        mucAsSeenByTwo.join(Resourcepart.from("two-" + randomString));
-
-        mucAsSeenByOne.sendMessage(mucMessage);
-        try{
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
+            mucAsSeenByTwo.join(Resourcepart.from("two-" + randomString));
+            mucAsSeenByOne.sendMessage(mucMessage);
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
+            tryDestroy(mucAsSeenByOne);
         }
     }
 
@@ -208,20 +212,19 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
 
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
 
-        //This implicitly tests "The service MUST add the user to the moderator list and then inform the admin of success" in §9.6, since it'll throw on either an error IQ or on no response.
-        mucAsSeenByOne.grantModerator(nicknameTwo);
-        try{
+            //This implicitly tests "The service MUST add the user to the moderator list and then inform the admin of success" in §9.6, since it'll throw on either an error IQ or on no response.
+            mucAsSeenByOne.grantModerator(nicknameTwo);
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
+            tryDestroy(mucAsSeenByOne);
         }
     }
 
@@ -258,22 +261,20 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
 
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
-        mucAsSeenByThree.join(nicknameThree);
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
+            mucAsSeenByThree.join(nicknameThree);
 
-        mucAsSeenByOne.grantModerator(nicknameTwo);
-        try{
+            mucAsSeenByOne.grantModerator(nicknameTwo);
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
-            mucAsSeenByThree.leave();
+            tryDestroy(mucAsSeenByOne);
         }
 
     }
@@ -310,20 +311,19 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
-
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
-
-        mucAsSeenByOne.grantModerator(nicknameTwo);
-        mucAsSeenByOne.revokeModerator(nicknameTwo);
         try{
+            if (handle != null) {
+                handle.makeInstant();
+            }
+
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
+
+            mucAsSeenByOne.grantModerator(nicknameTwo);
+            mucAsSeenByOne.revokeModerator(nicknameTwo);
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
+            tryDestroy(mucAsSeenByOne);
         }
     }
 
@@ -360,25 +360,22 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
 
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
-        mucAsSeenByThree.join(nicknameThree);
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
+            mucAsSeenByThree.join(nicknameThree);
 
-        mucAsSeenByOne.grantModerator(nicknameTwo);
-        mucAsSeenByOne.revokeModerator(nicknameTwo);
-        try{
+            mucAsSeenByOne.grantModerator(nicknameTwo);
+            mucAsSeenByOne.revokeModerator(nicknameTwo);
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
-            mucAsSeenByThree.leave();
+            tryDestroy(mucAsSeenByOne);
         }
-
     }
 
     /**
@@ -413,19 +410,17 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
 
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
-        mucAsSeenByOne.revokeVoice(nicknameTwo);
-
-        try{
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
+            mucAsSeenByOne.revokeVoice(nicknameTwo);
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
+            tryDestroy(mucAsSeenByOne);
         }
     }
 
@@ -462,27 +457,23 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
 
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
-        mucAsSeenByThree.join(nicknameThree);
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
+            mucAsSeenByThree.join(nicknameThree);
 
-        mucAsSeenByOne.revokeVoice(nicknameTwo);
-
-        try{
+            mucAsSeenByOne.revokeVoice(nicknameTwo);
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
-            mucAsSeenByThree.leave();
+            tryDestroy(mucAsSeenByOne);
         }
     }
 
-    
     /**
      * Asserts that a user who undergoes an affiliation change receives that change as a presence update
      *
@@ -516,20 +507,19 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
 
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
 
-        //This implicitly tests "The service MUST add the user to the admin list and then inform the owner of success" in §10.6, since it'll throw on either an error IQ or on no response.
-        mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
-        try{
+            //This implicitly tests "The service MUST add the user to the admin list and then inform the owner of success" in §10.6, since it'll throw on either an error IQ or on no response.
+            mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
+            tryDestroy(mucAsSeenByOne);
         }
     }
 
@@ -566,24 +556,21 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
 
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
-        mucAsSeenByThree.join(nicknameThree);
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
+            mucAsSeenByThree.join(nicknameThree);
 
-        mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
-        try{
+            mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
-            mucAsSeenByThree.leave();
+            tryDestroy(mucAsSeenByOne);
         }
-
     }
 
     /**
@@ -618,20 +605,19 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
 
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
 
-        mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
-        mucAsSeenByOne.revokeAdmin(conTwo.getUser().asEntityBareJid());
-        try{
+            mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+            mucAsSeenByOne.revokeAdmin(conTwo.getUser().asEntityBareJid());
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
+            tryDestroy(mucAsSeenByOne);
         }
     }
 
@@ -668,25 +654,22 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         });
 
         MucCreateConfigFormHandle handle = mucAsSeenByOne.createOrJoin(Resourcepart.from("one-" + randomString));
-        if (handle != null) {
-            handle.makeInstant();
-        }
+        try {
+            if (handle != null) {
+                handle.makeInstant();
+            }
 
-        final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
-        final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
-        mucAsSeenByTwo.join(nicknameTwo);
-        mucAsSeenByThree.join(nicknameThree);
+            final Resourcepart nicknameTwo = Resourcepart.from("two-" + randomString);
+            final Resourcepart nicknameThree = Resourcepart.from("three-" + randomString);
+            mucAsSeenByTwo.join(nicknameTwo);
+            mucAsSeenByThree.join(nicknameThree);
 
-        mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
-        mucAsSeenByOne.revokeAdmin(conTwo.getUser().asEntityBareJid());
-        try{
+            mucAsSeenByOne.grantAdmin(conTwo.getUser().asBareJid());
+            mucAsSeenByOne.revokeAdmin(conTwo.getUser().asEntityBareJid());
             resultSyncPoint.waitForResult(timeout);
         } finally {
-            mucAsSeenByTwo.leave();
-            mucAsSeenByOne.leave();
-            mucAsSeenByThree.leave();
+            tryDestroy(mucAsSeenByOne);
         }
-
     }
 
     @SmackIntegrationTest
@@ -724,5 +707,20 @@ public class MultiUserChatIntegrationTest extends AbstractSmackIntegrationTest {
         assertEquals(0, mucManagerOne.getJoinedRooms().size());
         assertEquals(0, muc.getOccupantsCount());
         assertNull(muc.getNickname());
+    }
+
+    /**
+     * Destroys a MUC room, ignoring any exceptions.
+     *
+     * @param muc The room to destroy (can be null).
+     */
+    static void tryDestroy(final MultiUserChat muc) {
+        try {
+            if (muc != null) {
+                muc.destroy("test fixture teardown", null);
+            }
+        } catch (Exception e) {
+            // ignore.
+        }
     }
 }
