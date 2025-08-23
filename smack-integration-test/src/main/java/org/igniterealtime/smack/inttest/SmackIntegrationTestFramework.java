@@ -476,6 +476,8 @@ public class SmackIntegrationTestFramework {
                 continue;
             }
 
+            config.sortTests(smackIntegrationTestMethods);
+
             List<ConcreteTest> concreteTests = new ArrayList<>(smackIntegrationTestMethods.size());
 
             for (Method testMethod : smackIntegrationTestMethods) {

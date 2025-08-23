@@ -26,6 +26,7 @@ import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -66,6 +67,11 @@ public final class Configuration {
         disabled,
         inBandRegistration,
         serviceAdministration,
+    }
+
+    public enum ExecutionOrder {
+        alphabetic,
+        reversed
     }
 
     public enum DnsResolver {
@@ -113,6 +119,8 @@ public final class Configuration {
     public final Set<String> disabledTests;
 
     private final Map<String, Set<String>> disabledTestsMap;
+
+    public final ExecutionOrder executionOrder;
 
     public final Set<String> enabledSpecifications;
 
@@ -193,6 +201,7 @@ public final class Configuration {
         this.enabledTestsMap = convertTestsToMap(enabledTests);
         this.disabledTests =  CollectionUtil.nullSafeUnmodifiableSet(builder.disabledTests);
         this.disabledTestsMap = convertTestsToMap(disabledTests);
+        this.executionOrder = builder.executionOrder;
         this.enabledSpecifications = CollectionUtil.nullSafeUnmodifiableSet(builder.enabledSpecifications);
         this.disabledSpecifications = CollectionUtil.nullSafeUnmodifiableSet(builder.disabledSpecifications);
         this.defaultConnectionNickname = builder.defaultConnectionNickname;
@@ -260,6 +269,8 @@ public final class Configuration {
         private Set<String> enabledTests;
 
         private Set<String> disabledTests;
+
+        private ExecutionOrder executionOrder;
 
         private Set<String> enabledSpecifications;
 
@@ -442,6 +453,20 @@ public final class Configuration {
             return this;
         }
 
+        public Builder setExecutionOrder(ExecutionOrder executionOrder) {
+            this.executionOrder = executionOrder;
+            return this;
+        }
+
+        public Builder setExecutionOrder(String executionOrderString) {
+            if (executionOrderString == null) {
+                return this;
+            }
+
+            ExecutionOrder executionOrder = ExecutionOrder.valueOf(executionOrderString);
+            return setExecutionOrder(executionOrder);
+        }
+
         public Builder setDefaultConnection(String defaultConnectionNickname) {
             this.defaultConnectionNickname = defaultConnectionNickname;
             return this;
@@ -611,6 +636,7 @@ public final class Configuration {
         builder.setDebugger(properties.getProperty("debugger"));
         builder.setEnabledTests(properties.getProperty("enabledTests"));
         builder.setDisabledTests(properties.getProperty("disabledTests"));
+        builder.setExecutionOrder(properties.getProperty("executionOrder"));
         builder.setEnabledSpecifications(properties.getProperty("enabledSpecifications"));
         builder.setDisabledSpecifications(properties.getProperty("disabledSpecifications"));
         builder.setDefaultConnection(properties.getProperty("defaultConnection"));
@@ -805,6 +831,28 @@ public final class Configuration {
         }
 
         return contains(method, disabledTestsMap);
+    }
+
+    public void sortTests(List<Method> methods) {
+        if (executionOrder == null) {
+            return;
+        }
+
+        final Comparator<Method> alphabetic = Comparator.comparing((Method m) -> m.getDeclaringClass().getName())
+            .thenComparing(Method::getName);
+
+        switch (executionOrder) {
+            case alphabetic:
+                methods.sort(alphabetic);
+                return;
+
+            case reversed:
+                methods.sort(Collections.reverseOrder(alphabetic));
+                return;
+
+            default:
+                throw new IllegalStateException("Unknown execution order: " + executionOrder);
+        }
     }
 
     public boolean isSpecificationEnabled(String specification) {
